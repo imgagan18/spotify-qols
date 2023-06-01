@@ -236,10 +236,10 @@
             // This is the actual play time
             const accurateProgress = check(state.timestamp) - check(previousPlayerState.timestamp);
             totalRoughTrackProgress += accurateProgress;
-            log(Level.TRACE, `Added accurate progress: ${accurateProgress}. Total: ${totalRoughTrackProgress}.`);
+            log(Level.TRACE, `Added accurate progress: ${accurateProgress / 1000}. Total: ${totalRoughTrackProgress / 1000}.`);
           } else {
             // If we don't have it, use the newest computed rough value.
-            log(Level.TRACE, `Added rough progress: ${currentRoughTrackProgress}. Total: ${totalRoughTrackProgress}.`);
+            log(Level.TRACE, `Added rough progress: ${currentRoughTrackProgress / 1000}. Total: ${totalRoughTrackProgress / 1000}.`);
             totalRoughTrackProgress += currentRoughTrackProgress;
           }
 
