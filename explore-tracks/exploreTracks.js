@@ -195,7 +195,7 @@
     let currentRoughTrackProgress = 0;
     let trackJustSaved = false;
 
-    while (1) {
+    while (true) {
       const { data } = Spicetify.Player;
 
       let state = null;
@@ -217,35 +217,29 @@
         };
       }
 
-      const stateChanged = previousPlayerState?.timestamp === state?.timestamp;
+      const sameState = previousPlayerState?.timestamp === state?.timestamp;
+      log(Level.TRACE, `Same state: ${sameState}.`);
       // Can this track potentially be saved?
       let potentialSave = false;
 
-      if (stateChanged) {
-        log(Level.TRACE, "Timestamp block.");
-        // previousPlayerState holds the same value as state.
-        // We're using previousPlayerState for clarity.
-        if (!trackJustSaved && previousPlayerState?.is_playing) {
+      if (!trackJustSaved && previousPlayerState?.is_playing) {
+        if (sameState) {
           // A track is playing, keep computing it's rough progress.
           // This is to ensure that long running songs are still saved.
-          log(Level.TRACE, "Timestamp save block.");
           currentRoughTrackProgress = Date.now() - check(previousPlayerState.timestamp);
+          log(Level.TRACE, `Current rough track progress: ${currentRoughTrackProgress / 1000}s.`);
           potentialSave = true;
-        }
-      } else {
-        log(Level.TRACE, "Non-timestamp block.");
-        // Some event has transpired. Perhaps the song has been paused, progressed or changed.
-        // In all of these cases we want to add to the track's total progress.
-        if (!trackJustSaved && previousPlayerState?.is_playing) {
-          log(Level.TRACE, "Non-timestamp save block.");
-
+        } else {
+          // Some event has transpired. Perhaps the song has been paused, progressed or changed.
+          // In all of these cases we want to add to the track's total progress.
           if (state !== null) {
             // This is the actual play time
-            totalRoughTrackProgress += (
-              check(state.timestamp) - check(previousPlayerState.timestamp)
-            );
+            const accurateProgress = check(state.timestamp) - check(previousPlayerState.timestamp);
+            totalRoughTrackProgress += accurateProgress;
+            log(Level.TRACE, `Added accurate progress: ${accurateProgress}. Total: ${totalRoughTrackProgress}.`);
           } else {
             // If we don't have it, use the newest computed rough value.
+            log(Level.TRACE, `Added rough progress: ${currentRoughTrackProgress}. Total: ${totalRoughTrackProgress}.`);
             totalRoughTrackProgress += currentRoughTrackProgress;
           }
 
@@ -253,25 +247,24 @@
           potentialSave = true;
         }
       }
-      const potentialTrackChange = !stateChanged;
 
       if (
         potentialSave
         && currentRoughTrackProgress + totalRoughTrackProgress >= trackProgressThresholdMS
       ) {
-        log(Level.TRACE, "Save block.");
+        log(Level.TRACE, "Threshold met, saving track.");
         markTrackAsExplored(check(previousPlayerState.trackURI.id));
         trackJustSaved = true;
       }
 
-      if (potentialTrackChange && state?.trackURI?.id !== previousPlayerState?.trackURI?.id) {
-        log(Level.TRACE, "Change block.");
+      if (!sameState && state?.trackURI?.id !== previousPlayerState?.trackURI?.id) {
+        log(Level.TRACE, "Track changed. Resetting values.");
         totalRoughTrackProgress = 0;
         currentRoughTrackProgress = 0;
         trackJustSaved = false;
 
         if (exploredTracks.includes(check(state.trackURI.id))) {
-          log(Level.TRACE, "Skipping track.");
+          log(Level.TRACE, "New track has been explored, changing tracks.");
           Spicetify.Player.next();
         }
       }
