@@ -199,10 +199,16 @@
       const { data } = Spicetify.Player;
 
       let state = null;
-      if (data && data.track) {
+      let trackURI = null;
+
+      if (data !== null && data.track !== null) {
+        trackURI = Spicetify.URI.fromString(data.track.uri);
+      }
+
+      if (trackURI?.type === Spicetify.URI.Type.TRACK) {
+        // A track is playing, ensure if the rest of the data is valid.
         if (
-          data.track.uri === null
-          || data.timestamp === null
+          data.timestamp === null
           || data.position_as_of_timestamp === null
           || data.is_paused === null
         ) {
@@ -213,9 +219,10 @@
           is_playing: !data.is_paused,
           position_at_ts: data.position_as_of_timestamp,
           timestamp: data.timestamp,
-          trackURI: Spicetify.URI.fromString(data.track.uri),
+          trackURI,
         };
       }
+      // If a track wasn't playing, the current state would be null.
 
       const sameState = previousPlayerState?.timestamp === state?.timestamp;
       log(Level.TRACE, `Same state: ${sameState}.`);
