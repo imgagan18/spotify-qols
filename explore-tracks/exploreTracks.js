@@ -1,7 +1,9 @@
 // @ts-check
-/// <reference path="../globals.d.ts" />
+/// <reference path="globals.d.ts" />
 
 (async function discover() {
+  // #region Global Values
+
   let maxTries = 200;
   const retryWaitMS = 300; // 0.3 * 1000
   const namespace = "explore";
@@ -11,6 +13,10 @@
   const trackProgressThresholdMS = 30 * 1000;
   let isEnabled = true;
   let exploredTracks = [];
+
+  // #endregion
+
+  // #region Utils
 
   /**
    * Sleep for the provided number of milliseconds.
@@ -94,6 +100,23 @@
   }
 
   /**
+   * Asserts that the provided value is not null or undefined.
+   * @param {*} val
+   * @returns {*}
+   * @throws {Error} If the value is null or undefined.
+   */
+  function check(val) {
+    if (val === null || val === undefined) {
+      throw new Error("Val wasn't supposed to be null.");
+    }
+    return val;
+  }
+
+  // #endregion
+
+  // #region Local Storage
+
+  /**
    * Saves the current enabled status into local storage.
    * @returns {void}
    */
@@ -159,29 +182,20 @@
   }
 
   /**
-   * Adds the provided track ID to the list of explored tracks.
-   * Also, saves it to local storage.
-   * @param {string} id - The ID of the track to mark as explored.
-   * @returns {void}
-   */
+ * Adds the provided track ID to the list of explored tracks.
+ * Also, saves it to local storage.
+ * @param {string} id - The ID of the track to mark as explored.
+ * @returns {void}
+ */
   function markTrackAsExplored(id) {
     log(Level.INFO, `Marking track as explored: ${id}`);
     exploredTracks.push(id);
     saveExplored();
   }
 
-  /**
-   * Asserts that the provided value is not null or undefined.
-   * @param {*} val
-   * @returns {*}
-   * @throws {Error} If the value is null or undefined.
-   */
-  function check(val) {
-    if (val === null || val === undefined) {
-      throw new Error("Val wasn't supposed to be null.");
-    }
-    return val;
-  }
+  // #endregion
+
+  // #region Main Logic
 
   /**
    * This checks the player state in an interval, and handles states.
@@ -281,6 +295,10 @@
     }
   }
 
+  // #endregion
+
+  // #region Debugging
+
   /**
    * Used for debugging.
    * Prints useful information about player state in an interval.
@@ -312,6 +330,8 @@
       await sleep(readIntervalMS);
     }
   }
+
+  // #endregion
 
   /**
    * Initializes the config, loads the UI, and handles player states.
