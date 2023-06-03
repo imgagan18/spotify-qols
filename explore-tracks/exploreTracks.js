@@ -1,5 +1,5 @@
 // @ts-check
-/// <reference path="globals.d.ts" />
+/// <reference path="../globals.d.ts" />
 
 (async function discover() {
   // #region Global Values
@@ -77,6 +77,8 @@
         Spicetify?.Player?.next,
         Spicetify?.URI?.fromString,
         Spicetify?.showNotification,
+        Spicetify?.Playbar?.Button,
+        Spicetify?.SVGIcons?.search,
       ];
 
       if (!spiceDependencies.every((dep) => dep)) {
@@ -152,7 +154,7 @@
     const storageStatus = Spicetify.LocalStorage.get(statusKey);
     if (storageStatus) {
       const parsed = JSON.parse(storageStatus);
-      if (parsed && (parsed === true || parsed === false)) {
+      if (parsed !== null && (parsed === true || parsed === false)) {
         isEnabled = parsed;
       } else {
         saveStatus();
@@ -210,7 +212,7 @@
     let trackJustSaved = false;
 
     while (true) {
-      const { data } = Spicetify.Player;
+      const data = isEnabled ? Spicetify.Player.data : null;
 
       let state = null;
       let trackURI = null;
@@ -236,10 +238,15 @@
           trackURI,
         };
       }
-      // If a track wasn't playing, the current state would be null.
-
+      // If a track wasn't playing or the extension was not enabled, the current state would be
+      // null.
       const sameState = previousPlayerState?.timestamp === state?.timestamp;
       log(Level.TRACE, `Same state: ${sameState}.`);
+      // if (!sameState) {
+      //   console.log(previousPlayerState);
+      //   console.log(state); 
+      // }
+
       // Can this track potentially be saved?
       let potentialSave = false;
 
@@ -248,7 +255,8 @@
           // A track is playing, keep computing it's rough progress.
           // This is to ensure that long running songs are still saved.
           currentRoughTrackProgress = Date.now() - check(previousPlayerState.timestamp);
-          log(Level.TRACE, `Current rough track progress: ${currentRoughTrackProgress / 1000}s.`);
+          // This log is extremely verbose, only enable if necessary.
+          // log(Level.TRACE, `Current rough track progress: ${currentRoughTrackProgress / 1000}s.`);
           potentialSave = true;
         } else {
           // Some event has transpired. Perhaps the song has been paused, progressed or changed.
@@ -278,13 +286,13 @@
         trackJustSaved = true;
       }
 
-      if (!sameState && state?.trackURI?.id !== previousPlayerState?.trackURI?.id) {
+      if (!sameState && state?.trackURI.id !== previousPlayerState?.trackURI.id) {
         log(Level.TRACE, "Track changed. Resetting values.");
         totalRoughTrackProgress = 0;
         currentRoughTrackProgress = 0;
         trackJustSaved = false;
 
-        if (exploredTracks.includes(check(state.trackURI.id))) {
+        if (exploredTracks.includes(state?.trackURI.id)) {
           log(Level.TRACE, "New track has been explored, changing tracks.");
           Spicetify.Player.next();
         }
@@ -293,6 +301,40 @@
       previousPlayerState = state;
       await sleep(readIntervalMS);
     }
+  }
+
+  // #endregion
+
+  // #region Playbar Button
+  const disabledLabel = "Enable discovery mode";
+  const enabledLabel = "Disable discovery mode";
+  const barButton = new Spicetify.Playbar.Button(
+    "null",
+    "search",
+    onBarButtonPress,
+    false,
+    false,
+    false,
+  );
+
+  /**
+   * Swap the enabled state, and sync the button state.
+   * @param {Spicetify.Playbar.Button} self
+   * @returns {void}
+   */
+  function onBarButtonPress(self) {
+    isEnabled = !isEnabled;
+    syncBarButtonState();
+    saveStatus();
+  }
+
+  /**
+   * Changes the button label and active status based on isEnabled.
+   * @returns {void}
+   */
+  function syncBarButtonState() {
+    barButton.active = isEnabled;
+    barButton.label = isEnabled ? enabledLabel : disabledLabel;
   }
 
   // #endregion
@@ -341,6 +383,8 @@
     await waitUntilReady();
     initializeLocalData();
 
+    syncBarButtonState();
+    barButton.register();
     await handleStates();
   }
 
