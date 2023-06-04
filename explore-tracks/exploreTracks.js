@@ -5,12 +5,16 @@
   // #region Global Values
 
   let maxTries = 200;
+  const maxTriesBumpLimit = 4; 
   const retryWaitMS = 300; // 0.3 * 1000
   const namespace = "explore";
   const statusKey = `${namespace}:status`;
   const exploredKey = `${namespace}:explored`;
   const readIntervalMS = 100; // 0.1 * 1000
   const trackProgressThresholdMS = 30 * 1000;
+  const trackIDRe = /^[a-zA-Z0-9]{18,26}$/; // Has some length leeway
+
+  // App data (with defaults)
   let isEnabled = true;
   let exploredTracks = [];
 
@@ -38,7 +42,6 @@
     DEBUG: "DEBUG",
     INFO: "INFO",
     WARNING: "WARNING",
-    ERROR: "ERROR",
   };
 
   /**
@@ -51,9 +54,9 @@
    */
   function log(level, message) {
     console.log(`[${level}] ${message}`);
-    if (level === Level.WARNING || level === Level.ERROR) {
+    if (level === Level.WARNING) {
       Spicetify.showNotification(
-        `${level}: ${message}\nPlease file an issue on GitHub.`,
+        `track-explorer ${level}: ${message}.`,
       );
     }
   }
@@ -64,11 +67,11 @@
    */
   async function waitUntilReady() {
     let initTries = 1;
+    let bumpCount = 0;
     log(Level.TRACE, "Waiting until Spicetify is loaded.");
 
     while (true) {
       const spiceDependencies = [
-        Spicetify?.Platform,
         Spicetify?.React,
         Spicetify?.LocalStorage?.get,
         Spicetify?.LocalStorage?.set,
@@ -79,6 +82,8 @@
         Spicetify?.showNotification,
         Spicetify?.Playbar?.Button,
         Spicetify?.SVGIcons?.search,
+        Spicetify?.SVGIcons?.check,
+        Spicetify?.Platform?.ClipboardAPI?.paste,
       ];
 
       if (!spiceDependencies.every((dep) => dep)) {
@@ -88,11 +93,16 @@
         } else {
           // The notification may fail, but we want to still at least log
           // this to the console.
-          log(
-            Level.ERROR,
-            `Spicetify hasn't loaded after ${maxTries} try/tries.`,
-          );
-          maxTries *= 2;
+          if (bumpCount < maxTriesBumpLimit) {
+            bumpCount++;
+            log(
+              Level.WARNING,
+              `Spicetify hasn't loaded after ${maxTries} try/tries.`,
+            );
+            maxTries *= 2;
+          } else {
+            throw new Error("Spicetify couldn't load.");
+          }
         }
       } else {
         log(Level.TRACE, `Took ${initTries} try/tries to load Spicetify`);
@@ -109,78 +119,102 @@
    */
   function check(val) {
     if (val === null || val === undefined) {
-      throw new Error("Val wasn't supposed to be null.");
+      throw new Error("An internal assertion has failed.");
     }
     return val;
   }
 
+  /**
+   * Asserts that the provided track IDs are most probably valid Spotify IDs.
+   * @param {string[]} trackIDs - The track IDs to check.
+   * @returns {boolean} Whether or not the track IDs are valid.
+   */
+  function areValidTrackIDs(trackIDs) {
+    return trackIDs.every((trackID) => trackIDRe.test(trackID));
+  }
+
   // #endregion
+
+  await waitUntilReady();
 
   // #region Local Storage
 
   /**
    * Saves the current enabled status into local storage.
+   * This function must be called any time the enabled status is modified.
+   * Also syncs the state of the playbar button.
    * @returns {void}
    */
-  function saveStatus() {
+  function syncEnabledData() {
     Spicetify.LocalStorage.set(statusKey, JSON.stringify(isEnabled));
+    syncBarButtonState();
   }
 
   /**
-   * Saves the currently explored tracks into local storage.
+   * Saves the provided explored tracks into local storage.
+   * This function must be called any time the explored tracks are modified.
    * @returns {void}
    */
-  function saveExplored() {
+  function syncExploredData() {
     Spicetify.LocalStorage.set(exploredKey, JSON.stringify(exploredTracks));
   }
 
   /**
-   * Clears the list of explored tracks.
-   * Also, saves it to local storage.
-   * @returns {void}
-   */
-  function clearExploredData() {
-    log(Level.INFO, "Clearing explored tracks.");
-    exploredTracks = [];
-    saveExplored();
-  }
-
-  /**
    * Retrive the saved data from local storage.
-   * If the data is not saved or invalid, update it.
+   * If the data is not saved or invalid, overwrite it with the default value.
    * @returns {void}
    */
   function initializeLocalData() {
     const storageStatus = Spicetify.LocalStorage.get(statusKey);
+
     if (storageStatus) {
-      const parsed = JSON.parse(storageStatus);
-      if (parsed !== null && (parsed === true || parsed === false)) {
-        isEnabled = parsed;
-      } else {
-        saveStatus();
+      let isMalformed = false;
+
+      try {
+        const parsed = JSON.parse(storageStatus);
+        if (parsed === true || parsed === false) {
+          log(Level.TRACE, `Loaded saved status: ${parsed}.`)
+          isEnabled = parsed;
+        } else {
+          isMalformed = true;
+        }
+      } catch (e) {
+        isMalformed = true;
+      }
+
+      if (isMalformed) {
         log(Level.WARNING, `Fixed old status (Previously: ${storageStatus}).`);
       }
     } else {
-      saveStatus();
-      log(Level.TRACE, "Set initial status.");
+      log(Level.TRACE, "Set default status.");
     }
+    syncEnabledData();
 
     const exploredString = Spicetify.LocalStorage.get(exploredKey);
+
     if (exploredString) {
-      const parsed = JSON.parse(exploredString);
-      if (parsed && Array.isArray(parsed)) {
-        exploredTracks = parsed;
-      } else {
-        saveExplored();
-        log(
-          Level.WARNING,
-          `Fixed old explored tracks (Previously: ${exploredString}).`,
-        );
+      let isMalformed = false;
+
+      try {
+        const parsed = JSON.parse(exploredString);
+        if (areValidTrackIDs(parsed)) {
+          // log number of tracks loaded
+          exploredTracks = parsed;
+          log(Level.TRACE, `Loaded ${parsed.length} saved explored tracks.`);
+        } else {
+          isMalformed = true;
+        }
+      } catch (e) {
+        isMalformed = true;
+      }
+
+      if (isMalformed) {
+        throw new Error("The explored track data in local storage is malformed.");
       }
     } else {
-      saveExplored();
-      log(Level.TRACE, "Set initial explored tracks.");
+      log(Level.TRACE, "Set default status.");
     }
+    syncExploredData();
   }
 
   /**
@@ -192,7 +226,7 @@
   function markTrackAsExplored(id) {
     log(Level.INFO, `Marking track as explored: ${id}`);
     exploredTracks.push(id);
-    saveExplored();
+    syncExploredData();
   }
 
   // #endregion
@@ -217,26 +251,26 @@
       let state = null;
       let trackURI = null;
 
-      if (data !== null && data.track !== null) {
+      if (data != null && data.track != null) {
         trackURI = Spicetify.URI.fromString(data.track.uri);
       }
 
       if (trackURI?.type === Spicetify.URI.Type.TRACK) {
         // A track is playing, ensure if the rest of the data is valid.
         if (
-          data.timestamp === null
-          || data.position_as_of_timestamp === null
-          || data.is_paused === null
+          data.timestamp == null
+          || data.position_as_of_timestamp == null
+          || data.is_paused == null
         ) {
-          throw new Error(`Returned data doesn't have expected values.\n${data}`);
+          throw new Error("Spotify returned data that doesn't have expected values.");
+        } else {
+          state = {
+            is_playing: !data.is_paused,
+            position_at_ts: data.position_as_of_timestamp,
+            timestamp: data.timestamp,
+            trackURI,
+          };
         }
-
-        state = {
-          is_playing: !data.is_paused,
-          position_at_ts: data.position_as_of_timestamp,
-          timestamp: data.timestamp,
-          trackURI,
-        };
       }
       // If a track wasn't playing or the extension was not enabled, the current state would be
       // null.
@@ -244,7 +278,7 @@
       log(Level.TRACE, `Same state: ${sameState}.`);
       // if (!sameState) {
       //   console.log(previousPlayerState);
-      //   console.log(state); 
+      //   console.log(state);
       // }
 
       // Can this track potentially be saved?
@@ -306,26 +340,26 @@
   // #endregion
 
   // #region Playbar Button
+
   const disabledLabel = "Enable discovery mode";
   const enabledLabel = "Disable discovery mode";
   const barButton = new Spicetify.Playbar.Button(
-    "null",
+    enabledLabel,
     "search",
     onBarButtonPress,
     false,
-    false,
+    true,
     false,
   );
 
   /**
-   * Swap the enabled state, and sync the button state.
+   * Toggle the enabled state..
    * @param {Spicetify.Playbar.Button} self
    * @returns {void}
    */
   function onBarButtonPress(self) {
     isEnabled = !isEnabled;
-    syncBarButtonState();
-    saveStatus();
+    syncEnabledData();
   }
 
   /**
@@ -335,6 +369,140 @@
   function syncBarButtonState() {
     barButton.active = isEnabled;
     barButton.label = isEnabled ? enabledLabel : disabledLabel;
+  }
+
+  // #endregion
+
+  // #region Options Menu
+
+  const settingsContent = document.createElement("div");
+  const style = document.createElement("style");
+  style.innerHTML = `
+  .main-trackCreditsModal-container {
+    width: auto !important;
+    background-color: var(--spice-player) !important;
+  }
+
+  .setting-row::after {
+    content: "";
+    display: table;
+    clear: both;
+  }
+  .setting-row {
+    display: flex;
+    padding: 10px 0;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .setting-row .col.description {
+    float: left;
+    padding-right: 15px;
+    width: 100%;
+  }
+  .setting-row .col.action {
+    float: right;
+    text-align: right;
+  }
+  button.switch {
+    align-items: center;
+    border: 0px;
+    border-radius: 50%;
+    background-color: rgba(var(--spice-rgb-shadow), .7);
+    color: var(--spice-text);
+    cursor: pointer;
+    display: flex;
+    margin-inline-start: 12px;
+    padding: 8px;
+  }
+  button.switch.disabled,
+  button.switch[disabled] {
+    color: rgba(var(--spice-rgb-text), .3);
+  }
+  button.reset {
+    font-weight: 700;
+    font-size: medium;
+    background-color: transparent;
+    border-radius: 500px;
+    transition-duration: 33ms;
+    transition-property: background-color, border-color, color, box-shadow, filter, transform;
+    padding-inline: 15px;
+    border: 1px solid #727272;
+    color: var(--spice-text);
+    min-block-size: 32px;
+    cursor: pointer;
+  }
+  button.reset:hover {
+    transform: scale(1.04);
+    border-color: var(--spice-text);
+  }`;
+  settingsContent.appendChild(style);
+
+  const header = document.createElement("h2");
+  header.innerText = "Options";
+  settingsContent.appendChild(header);
+
+  async function exportItems() {
+    const data = JSON.stringify(exploredTracks);
+    await Spicetify.Platform.ClipboardAPI.copy(data);
+    Spicetify.showNotification("Copied explored tracks to clipboard.");
+  }
+
+  async function importItems() {
+    const newData = await Spicetify.Platform.ClipboardAPI.paste();
+    const parsedData = JSON.parse(newData);
+
+    if (
+      parsedData && Array.isArray(parsedData) && areValidTrackIDs(parsedData)
+    ) {
+      exploredTracks = [...new Set([...exploredTracks, ...parsedData])];
+      syncExploredData();
+      Spicetify.showNotification("Merged new tracks with current data.");
+    } else {
+      Spicetify.showNotification("The clipboard contains invalid JSON, did you export tracks first?");
+    }
+  }
+
+  function clearItems() {
+    exploredTracks = [];
+    syncExploredData();
+    Spicetify.showNotification("Cleared all tracks.");
+  }
+
+  settingsContent.appendChild(createButtonRow("Export", "Save explored tracks to clipboard.", exportItems));
+  settingsContent.appendChild(createButtonRow("Import", "Merge the explored tracks from clipboard with the current data.", importItems));
+  settingsContent.appendChild(createButtonRow("Clear ", "Clear all explored tracks data.", clearItems));
+
+  const menuItem = new Spicetify.Menu.Item(
+    "Track Explorer",
+    false,
+    () => {
+      Spicetify.PopupModal.display({
+        title: "Track Explorer Settings",
+        content: settingsContent,
+      });
+    },
+    "search",
+  );
+
+  /**
+   * Creates a setting row with a button.
+   * @param {string} text - The text to display on the button.
+   * @param {string} description - The description to display in the row.
+   * @param {*} callback - The callback to call when the button is pressed.
+   * @returns {HTMLDivElement} The created row.
+   */
+  function createButtonRow(text, description, callback) {
+    const container = document.createElement("div");
+    container.classList.add("setting-row");
+
+    container.innerHTML = `
+    <label class="col description">${description}</label>
+    <div class="col action"><button class="reset">${text}</button></div>
+    `;
+
+    const button = check(container.querySelector("button.reset"));
+    button.onclick = callback;
+    return container;
   }
 
   // #endregion
@@ -380,11 +548,9 @@
    * @returns {Promise<void>}
    */
   async function main() {
-    await waitUntilReady();
-    initializeLocalData();
-
-    syncBarButtonState();
+    await initializeLocalData();
     barButton.register();
+    menuItem.register();
     await handleStates();
   }
 
