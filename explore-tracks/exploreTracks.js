@@ -126,11 +126,11 @@
 
   /**
    * Asserts that the provided track IDs are most probably valid Spotify IDs.
-   * @param {string[]} trackIDs - The track IDs to check.
+   * @param {*} trackIDs - The track IDs to check.
    * @returns {boolean} Whether or not the track IDs are valid.
    */
   function areValidTrackIDs(trackIDs) {
-    return trackIDs.every((trackID) => trackIDRe.test(trackID));
+    return Array.isArray(trackIDs) && trackIDs.every((trackID) => typeof trackID === "string" && trackIDRe.test(trackID));
   }
 
   // #endregion
@@ -441,18 +441,29 @@
   header.innerText = "Options";
   settingsContent.appendChild(header);
 
+  /**
+   * Copy the current explored tracks to the clipboard.
+   * @returns {Promise<void>}
+   */
   async function exportItems() {
-    const data = JSON.stringify(exploredTracks);
+    const data = JSON.stringify(exploredTracks, null, 2);
     await Spicetify.Platform.ClipboardAPI.copy(data);
     Spicetify.showNotification("Copied explored tracks to clipboard.");
   }
 
+  /**
+   * Merge the tracks from the clipboard with the current data.
+   * @returns {Promise<void>}
+   */
   async function importItems() {
     const newData = await Spicetify.Platform.ClipboardAPI.paste();
-    const parsedData = JSON.parse(newData);
+    let parsedData = null;
+    try {
+      parsedData = JSON.parse(newData);
+    } catch (e) {}
 
     if (
-      parsedData && Array.isArray(parsedData) && areValidTrackIDs(parsedData)
+      areValidTrackIDs(parsedData)
     ) {
       exploredTracks = [...new Set([...exploredTracks, ...parsedData])];
       syncExploredData();
@@ -462,6 +473,10 @@
     }
   }
 
+  /**
+   * Clear all explored tracks data.
+   * @returns {void}
+   */
   function clearItems() {
     exploredTracks = [];
     syncExploredData();
