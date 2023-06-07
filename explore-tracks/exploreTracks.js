@@ -11,7 +11,8 @@
   const statusKey = `${namespace}:status`;
   const exploredKey = `${namespace}:explored`;
   const hotkeysNS = `${namespace}:hotkeys`;
-  const defaultMod = /Mac|iPod|iPhone|iPad/.test(navigator.platform) ? "meta" : "ctrl";
+  const isMac = /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+  const defaultMod = isMac ? "meta" : "ctrl";
   const readIntervalMS = 100; // 0.1 * 1000
   const trackProgressThresholdMS = 30 * 1000;
   const editTimeoutAfter = 10 * 1000;
@@ -267,7 +268,7 @@
         syncExploredData();
         return true;
       },
-      false
+      false,
     );
 
     Object.entries(allHotkeys).forEach(([name, data]) => {
@@ -628,13 +629,13 @@
   }
 
   settingsContent.appendChild(
-    createButtonRow("Export", "Save explored tracks to clipboard.", exportItems)
+    createButtonRow("Export", "Save explored tracks to clipboard.", exportItems),
   );
   settingsContent.appendChild(
-    createButtonRow("Import", "Merge the explored tracks from clipboard with the current data.", importItems)
+    createButtonRow("Import", "Merge the explored tracks from clipboard with the current data.", importItems),
   );
   settingsContent.appendChild(
-    createButtonRow("Clear ", "Clear all explored tracks data.", clearItems)
+    createButtonRow("Clear ", "Clear all explored tracks data.", clearItems),
   );
 
   // #endregion
@@ -660,6 +661,9 @@
     const formatted = parts.map((part) => {
       if (part === "plus") {
         return "+";
+      }
+      if (part === "meta") {
+        return isMac ? "⌘" : "Win";
       }
       return part[0].toUpperCase() + part.slice(1);
     });
@@ -869,7 +873,7 @@
     // Spicetify.SVGIcons is an object containing svg paths for icons. Create a popupmodal to display all of them,
     // a single path looks like <path d="M0 0h24v24H0z" fill="none"></path>
     const container = document.createElement("div");
-    container.innerHTML = "<style>.icon-container{display:flex;align-items:center;}.icon{margin-right:10px;}</style>"
+    container.innerHTML = "<style>.icon-container{display:flex;align-items:center;}.icon{margin-right:10px;}</style>";
     Object.entries(Spicetify.SVGIcons).forEach(([name, path]) => {
       container.innerHTML += `<div class="icon-container"><div class="icon">
       <svg viewBox="0 0 16 16" width="50" height="50" fill="currentColor">${path}</svg>
