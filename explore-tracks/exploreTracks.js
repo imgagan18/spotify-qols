@@ -34,6 +34,97 @@
 
   // #endregion
 
+  // #region Mousetrap Utils
+  var _MAP = {
+    8: 'backspace',
+    9: 'tab',
+    13: 'enter',
+    16: 'shift',
+    17: 'ctrl',
+    18: 'alt',
+    20: 'capslock',
+    27: 'esc',
+    32: 'space',
+    33: 'pageup',
+    34: 'pagedown',
+    35: 'end',
+    36: 'home',
+    37: 'left',
+    38: 'up',
+    39: 'right',
+    40: 'down',
+    45: 'ins',
+    46: 'del',
+    91: 'meta',
+    93: 'meta',
+    224: 'meta'
+  };
+
+  var _KEYCODE_MAP = {
+    106: '*',
+    107: '+',
+    109: '-',
+    110: '.',
+    111: '/',
+    186: ';',
+    187: '=',
+    188: ',',
+    189: '-',
+    190: '.',
+    191: '/',
+    192: '`',
+    219: '[',
+    220: '\\',
+    221: ']',
+    222: '\''
+  };
+
+  /**
+   * takes the event and returns the key character
+   *
+   * @param {Event} e
+   * @return {string}
+   */
+  function characterFromEvent(e) {
+    // for keypress events we should return the character as is
+    if (e.type == 'keypress') {
+      var character = String.fromCharCode(e.which);
+
+      // if the shift key is not pressed then it is safe to assume
+      // that we want the character to be lowercase.  this means if
+      // you accidentally have caps lock on then your key bindings
+      // will continue to work
+      //
+      // the only side effect that might not be desired is if you
+      // bind something like 'A' cause you want to trigger an
+      // event when capital A is pressed caps lock will no longer
+      // trigger the event.  shift+a will though.
+      if (!e.shiftKey) {
+        character = character.toLowerCase();
+      }
+
+      return character;
+    }
+
+    // for non keypress events the special maps are needed
+    if (_MAP[e.which]) {
+      return _MAP[e.which];
+    }
+
+    if (_KEYCODE_MAP[e.which]) {
+      return _KEYCODE_MAP[e.which];
+    }
+
+    // if it is not in the special map
+
+    // with keydown and keyup events the character seems to always
+    // come in as an uppercase character whether you are pressing shift
+    // or not.  we should make sure it is always lowercase for comparisons
+    return String.fromCharCode(e.which).toLowerCase();
+  }
+
+  // #endregion
+
   // #region Utils
 
   /**
@@ -702,7 +793,8 @@
     if (altKey) combo.push("alt");
 
     if (event.type === "keydown" && !modifiers.includes(key)) {
-      const sanitizedKey = key === "+" ? "plus" : key;
+      const parsedKey = characterFromEvent(event);
+      const sanitizedKey = parsedKey === "+" ? "plus" : parsedKey;
       combo.push(sanitizedKey);
 
       targetData.combo = combo.join("+");
