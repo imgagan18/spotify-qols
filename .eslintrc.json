@@ -1,0 +1,46 @@
+{
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "extends": ["plugin:react/recommended", "airbnb", "prettier"],
+  "overrides": [],
+  "parserOptions": {
+    "ecmaVersion": "latest"
+  },
+  "plugins": ["react"],
+  "settings": {
+    "react": {
+      "version": "17.0.2"
+    }
+  },
+  "rules": {
+    "no-use-before-define": [
+      "error",
+      {
+        "functions": false,
+        "classes": true,
+        "variables": true,
+        "allowNamedExports": false
+      }
+    ],
+    "no-await-in-loop": "off",
+    "max-len": [
+      "error",
+      {
+        "code": 100,
+        "comments": 100,
+        "ignoreComments": false,
+        "ignoreTrailingComments": false,
+        "ignoreUrls": false,
+        "ignoreStrings": false,
+        "ignoreTemplateLiterals": false,
+        "ignoreRegExpLiterals": false
+      }
+    ]
+  },
+  "globals": {
+    "Spicetify": "readonly"
+  }
+}

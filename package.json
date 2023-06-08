@@ -1,0 +1,26 @@
+{
+  "name": "spotify-qols",
+  "description": " Spicetify extensions which add some QoL features to Spotify.",
+  "author": "Qwerty-133",
+  "license": "MIT",
+  "homepage": "https://github.com/Qwerty-133/spotify-qols",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Qwerty-133/spotify-qols.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Qwerty-133/spotify-qols/issues"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.2",
+    "@types/react-dom": "^17.0.2",
+    "eslint": "^8.42.0",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-import": "^2.27.5",
+    "eslint-plugin-jsx-a11y": "^6.7.1",
+    "eslint-plugin-react": "^7.32.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "prettier": "2.8.8"
+  }
+}

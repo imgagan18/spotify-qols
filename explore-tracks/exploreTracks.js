@@ -35,60 +35,62 @@
   // #endregion
 
   // #region Mousetrap Utils
-  var _MAP = {
-    8: 'backspace',
-    9: 'tab',
-    13: 'enter',
-    16: 'shift',
-    17: 'ctrl',
-    18: 'alt',
-    20: 'capslock',
-    27: 'esc',
-    32: 'space',
-    33: 'pageup',
-    34: 'pagedown',
-    35: 'end',
-    36: 'home',
-    37: 'left',
-    38: 'up',
-    39: 'right',
-    40: 'down',
-    45: 'ins',
-    46: 'del',
-    91: 'meta',
-    93: 'meta',
-    224: 'meta'
+
+  /* eslint-disable */
+  const MAP = {
+    8: "backspace",
+    9: "tab",
+    13: "enter",
+    16: "shift",
+    17: "ctrl",
+    18: "alt",
+    20: "capslock",
+    27: "esc",
+    32: "space",
+    33: "pageup",
+    34: "pagedown",
+    35: "end",
+    36: "home",
+    37: "left",
+    38: "up",
+    39: "right",
+    40: "down",
+    45: "ins",
+    46: "del",
+    91: "meta",
+    93: "meta",
+    224: "meta",
   };
 
-  var _KEYCODE_MAP = {
-    106: '*',
-    107: '+',
-    109: '-',
-    110: '.',
-    111: '/',
-    186: ';',
-    187: '=',
-    188: ',',
-    189: '-',
-    190: '.',
-    191: '/',
-    192: '`',
-    219: '[',
-    220: '\\',
-    221: ']',
-    222: '\''
+  const KEYCODE_MAP = {
+    106: "*",
+    107: "+",
+    109: "-",
+    110: ".",
+    111: "/",
+    186: ";",
+    187: "=",
+    188: ",",
+    189: "-",
+    190: ".",
+    191: "/",
+    192: "`",
+    219: "[",
+    220: "\\",
+    221: "]",
+    222: "'",
   };
 
   /**
    * takes the event and returns the key character
    *
-   * @param {Event} e
+   * @param {KeyboardEvent} e
    * @return {string}
    */
   function characterFromEvent(e) {
     // for keypress events we should return the character as is
-    if (e.type == 'keypress') {
-      var character = String.fromCharCode(e.which);
+    if (e.type === "keypress") {
+      let character = String.fromCharCode(e.which);
 
       // if the shift key is not pressed then it is safe to assume
       // that we want the character to be lowercase.  this means if
@@ -107,12 +109,12 @@
     }
 
     // for non keypress events the special maps are needed
-    if (_MAP[e.which]) {
-      return _MAP[e.which];
+    if (MAP[e.which]) {
+      return MAP[e.which];
     }
 
-    if (_KEYCODE_MAP[e.which]) {
-      return _KEYCODE_MAP[e.which];
+    if (KEYCODE_MAP[e.which]) {
+      return KEYCODE_MAP[e.which];
     }
 
     // if it is not in the special map
@@ -122,6 +124,7 @@
     // or not.  we should make sure it is always lowercase for comparisons
     return String.fromCharCode(e.which).toLowerCase();
   }
+  /* eslint-enable */
 
   // #endregion
 
@@ -134,6 +137,7 @@
    * @see https://stackoverflow.com/a/39914235/6828099
    */
   function sleep(ms) {
+    // eslint-disable-next-line no-promise-executor-return
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
@@ -158,12 +162,12 @@
    * @todo Add a report button to the UI for warnings and errors.
    */
   function log(level, message) {
+    /* eslint-disable no-console */
     console.log(`[${level}] ${message}`);
     if (level === Level.WARNING) {
-      Spicetify.showNotification(
-        `track-explorer ${level}: ${message}.`,
-      );
+      Spicetify.showNotification(`track-explorer ${level}: ${message}.`);
     }
+    /* eslint-enable no-console */
   }
 
   /**
@@ -175,7 +179,7 @@
     let bumpCount = 0;
     log(Level.TRACE, "Waiting until Spicetify is loaded.");
 
-    while (true) {
+    for (;;) {
       const spiceDependencies = [
         Spicetify?.React,
         Spicetify?.LocalStorage?.get,
@@ -200,15 +204,12 @@
 
       if (initTries < maxTries) {
         await sleep(retryWaitMS);
-        initTries++;
+        initTries += 1;
       } else if (bumpCount < maxTriesBumpLimit) {
         // The notification may fail, but we want to still at least log
         // this to the console.
-        bumpCount++;
-        log(
-          Level.WARNING,
-          `Spicetify hasn't loaded after ${maxTries} try/tries.`,
-        );
+        bumpCount += 1;
+        log(Level.WARNING, `Spicetify hasn't loaded after ${maxTries} try/tries.`);
         maxTries *= 2;
       } else {
         throw new Error("Spicetify couldn't load.");
@@ -237,8 +238,8 @@
   function areValidTrackIDs(trackIDs) {
     // ensure that the track IDs are strings
     return (
-      Array.isArray(trackIDs)
-      && trackIDs.every((trackID) => typeof trackID === "string" && trackIDRe.test(trackID))
+      Array.isArray(trackIDs) &&
+      trackIDs.every((trackID) => typeof trackID === "string" && trackIDRe.test(trackID))
     );
   }
 
@@ -296,7 +297,7 @@
    * @returns {void}
    * @throws {Error} If the value is invalid and fix is false.
    * @throws {Error} If the callback fails to accept the default value.
-  */
+   */
   function initLocalKey(keyName, defaultVal, callback, fix = true) {
     const string = Spicetify.LocalStorage.get(keyName);
     if (!string) {
@@ -313,7 +314,9 @@
     try {
       const parsed = JSON.parse(string);
       accepted = callback(parsed);
-    } catch (e) { }
+    } catch (e) {
+      // ignore
+    }
 
     if (!accepted) {
       if (fix) {
@@ -343,7 +346,7 @@
         syncEnabledData();
         return true;
       },
-      true,
+      true
     );
 
     initLocalKey(
@@ -359,7 +362,7 @@
         syncExploredData();
         return true;
       },
-      false,
+      false
     );
 
     Object.entries(allHotkeys).forEach(([name, data]) => {
@@ -372,11 +375,11 @@
             return false;
           }
 
-          data.combo = combo;
+          data.combo = combo; // eslint-disable-line no-param-reassign
           syncHotkeyData(name);
           return true;
         },
-        true,
+        true
       );
     });
   }
@@ -396,11 +399,11 @@
   }
 
   /**
-  * Add the provided track ID to the list of explored tracks.
-  * Also, saves it to local storage.
-  * @param {string} id The ID of the track to mark as explored.
-  * @returns {void}
-  */
+   * Add the provided track ID to the list of explored tracks.
+   * Also, saves it to local storage.
+   * @param {string} id The ID of the track to mark as explored.
+   * @returns {void}
+   */
   function markTrackAsExplored(id) {
     log(Level.INFO, `Marking track as explored: ${id}`);
     exploredTracks.push(id);
@@ -423,7 +426,7 @@
     let currentRoughTrackProgress = 0;
     let trackJustSaved = false;
 
-    while (true) {
+    for (;;) {
       const data = isEnabled ? Spicetify.Player.data : null;
 
       let state = null;
@@ -436,9 +439,9 @@
       if (trackURI?.type === Spicetify.URI.Type.TRACK) {
         // A track is playing, ensure if the rest of the data is valid.
         if (
-          data.timestamp == null
-          || data.position_as_of_timestamp == null
-          || data.is_paused == null
+          data.timestamp == null ||
+          data.position_as_of_timestamp == null ||
+          data.is_paused == null
         ) {
           throw new Error("Spotify returned data that doesn't have expected values.");
         } else {
@@ -482,13 +485,17 @@
             totalRoughTrackProgress += accurateProgress;
             log(
               Level.TRACE,
-              `Added accurate progress: ${accurateProgress / 1000}. Total: ${totalRoughTrackProgress / 1000}.`,
+              `Added accurate progress: ${accurateProgress / 1000}. Total: ${
+                totalRoughTrackProgress / 1000
+              }.`
             );
           } else {
             // If we don't have it, use the newest computed rough value.
             log(
               Level.TRACE,
-              `Added rough progress: ${currentRoughTrackProgress / 1000}. Total: ${totalRoughTrackProgress / 1000}.`,
+              `Added rough progress: ${currentRoughTrackProgress / 1000}. Total: ${
+                totalRoughTrackProgress / 1000
+              }.`
             );
             totalRoughTrackProgress += currentRoughTrackProgress;
           }
@@ -499,8 +506,8 @@
       }
 
       if (
-        potentialSave
-        && currentRoughTrackProgress + totalRoughTrackProgress >= trackProgressThresholdMS
+        potentialSave &&
+        currentRoughTrackProgress + totalRoughTrackProgress >= trackProgressThresholdMS
       ) {
         log(Level.TRACE, "Threshold met, saving track.");
         markTrackAsExplored(check(previousPlayerState.trackURI.id));
@@ -536,7 +543,7 @@
     onBarButtonPress,
     false,
     true,
-    false,
+    false
   );
 
   /**
@@ -544,7 +551,7 @@
    * @param {Spicetify.Playbar.Button} self
    * @returns {void}
    */
-  function onBarButtonPress(self) {
+  function onBarButtonPress() {
     isEnabled = !isEnabled;
     syncEnabledData();
   }
@@ -649,12 +656,12 @@
   settingsContent.appendChild(style);
 
   /**
- * Creates a setting row with a button.
- * @param {string} text - The text to display on the button.
- * @param {string} description - The description to display in the row.
- * @param {*} callback - The callback to call when the button is pressed.
- * @returns {HTMLDivElement} The created row.
- */
+   * Creates a setting row with a button.
+   * @param {string} text - The text to display on the button.
+   * @param {string} description - The description to display in the row.
+   * @param {*} callback - The callback to call when the button is pressed.
+   * @returns {HTMLDivElement} The created row.
+   */
   function createButtonRow(text, description, callback) {
     const container = document.createElement("div");
     container.classList.add("setting-row");
@@ -696,16 +703,18 @@
     let parsedData = null;
     try {
       parsedData = JSON.parse(newData);
-    } catch (e) { }
+    } catch (e) {
+      // ignore
+    }
 
-    if (
-      areValidTrackIDs(parsedData)
-    ) {
+    if (areValidTrackIDs(parsedData)) {
       exploredTracks = [...new Set([...exploredTracks, ...parsedData])];
       syncExploredData();
       Spicetify.showNotification("Merged new tracks with current data.");
     } else {
-      Spicetify.showNotification("The clipboard contains invalid JSON, did you export tracks first?");
+      Spicetify.showNotification(
+        "The clipboard contains invalid JSON, did you export tracks first?"
+      );
     }
   }
 
@@ -720,13 +729,17 @@
   }
 
   settingsContent.appendChild(
-    createButtonRow("Export", "Save explored tracks to clipboard.", exportItems),
+    createButtonRow("Export", "Save explored tracks to clipboard.", exportItems)
   );
   settingsContent.appendChild(
-    createButtonRow("Import", "Merge the explored tracks from clipboard with the current data.", importItems),
+    createButtonRow(
+      "Import",
+      "Merge the explored tracks from clipboard with the current data.",
+      importItems
+    )
   );
   settingsContent.appendChild(
-    createButtonRow("Clear ", "Clear all explored tracks data.", clearItems),
+    createButtonRow("Clear ", "Clear all explored tracks data.", clearItems)
   );
 
   // #endregion
@@ -783,9 +796,7 @@
     event.preventDefault();
     const targetData = allHotkeys[targetHotkey];
 
-    const {
-      key, ctrlKey, shiftKey, altKey, metaKey,
-    } = event;
+    const { key, ctrlKey, shiftKey, altKey, metaKey } = event;
     const combo = [];
     if (ctrlKey) combo.push("ctrl");
     if (metaKey) combo.push("meta");
@@ -910,10 +921,11 @@
         content: settingsContent,
       });
     },
-    "search",
+    "search"
   );
 
   // #region Debugging
+  /* eslint-disable */
 
   /**
    * Used for debugging.
@@ -934,11 +946,9 @@
 
         const formattedTimestamp = `${minutes}:${seconds}`;
         const position = data.position_as_of_timestamp / 1000;
-        const formattedPosition = `${Math.floor(position / 60)}:${Math.floor(
-          position % 60,
-        )}`;
+        const formattedPosition = `${Math.floor(position / 60)}:${Math.floor(position % 60)}`;
         console.log(
-          `${data.timestamp}, ${data.position_as_of_timestamp}, ${formattedTimestamp}, ${formattedPosition}, ${data.is_paused}`,
+          `${data.timestamp}, ${data.position_as_of_timestamp}, ${formattedTimestamp}, ${formattedPosition}, ${data.is_paused}`
         );
       }
 
@@ -965,7 +975,8 @@
     // Spicetify.SVGIcons is an object containing svg paths for icons. Create a popupmodal to display all of them,
     // a single path looks like <path d="M0 0h24v24H0z" fill="none"></path>
     const container = document.createElement("div");
-    container.innerHTML = "<style>.icon-container{display:flex;align-items:center;}.icon{margin-right:10px;}</style>";
+    container.innerHTML =
+      "<style>.icon-container{display:flex;align-items:center;}.icon{margin-right:10px;}</style>";
     Object.entries(Spicetify.SVGIcons).forEach(([name, path]) => {
       container.innerHTML += `<div class="icon-container"><div class="icon">
       <svg viewBox="0 0 16 16" width="50" height="50" fill="currentColor">${path}</svg>
@@ -978,6 +989,7 @@
     // });
   }
 
+  /* eslint-enable */
   // #endregion
 
   /**
@@ -992,4 +1004,4 @@
   }
 
   await main();
-}());
+})();
