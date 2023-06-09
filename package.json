@@ -29,7 +29,9 @@
     "lint": "eslint . && prettier --check .",
     "ci-lint": "eslint . --max-warnings=0 && prettier --check .",
     "fix": "eslint --fix . && prettier --write .",
-    "prepare": "husky install"
+    "prepare": "husky install",
+    "dev-tools": "spicetify enable-devtools --quiet",
+    "explore": "npm run dev-tools && spicetify watch -e spotify-qols/explore-tracks/exploreTracks.js"
   },
   "lint-staged": {
     "*.js": [
