@@ -27,14 +27,15 @@
   },
   "scripts": {
     "lint": "eslint . && prettier --check .",
-    "fix": "eslint . --fix && prettier --write .",
+    "ci-lint": "eslint . --max-warnings=0 && prettier --check .",
+    "fix": "eslint --fix . && prettier --write .",
     "prepare": "husky install"
   },
   "lint-staged": {
     "*.js": [
-      "eslint --fix",
-      "prettier --write --ignore-unknown"
+      "eslint --fix --max-warnings=0 .",
+      "prettier --write --ignore-unknown ."
     ],
-    "!(*.js)": "prettier --write --ignore-unknown"
+    "!(*.js)": "prettier --write --ignore-unknown ."
   }
 }
