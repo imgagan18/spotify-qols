@@ -854,6 +854,8 @@
     targetData.editButton.classList.remove("editing");
     targetData.editButton.innerText = "Edit";
     targetData.displayElement.innerHTML = formatKey(targetData.combo);
+
+    targetHotkey = null;
   }
 
   /**
@@ -886,7 +888,6 @@
     editButton.addEventListener("click", () => {
       if (targetHotkey != null) {
         stopCapturingHotkey();
-        targetHotkey = null;
       } else {
         targetHotkey = name;
         startCapturingHotkey();
