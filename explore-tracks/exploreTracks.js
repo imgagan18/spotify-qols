@@ -15,7 +15,7 @@
   const defaultMod = isMac ? "meta" : "ctrl";
   const readIntervalMS = 100; // 0.1 * 1000
   const trackProgressThresholdMS = 30 * 1000;
-  const editTimeoutAfter = 10 * 1000;
+  const editTimeoutAfter = 3 * 1000;
   const trackIDRe = /^[a-zA-Z0-9]{18,26}$/; // Has some length leeway
   const modifiers = ["Control", "Shift", "Alt", "Meta"];
 
