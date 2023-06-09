@@ -17,6 +17,7 @@
   const trackProgressThresholdMS = 30 * 1000;
   const editTimeoutAfter = 10 * 1000;
   const trackIDRe = /^[a-zA-Z0-9]{18,26}$/; // Has some length leeway
+  const modifiers = ["Control", "Shift", "Alt", "Meta"];
 
   // App data (with defaults)
   let isEnabled = true;
@@ -394,8 +395,14 @@
       return true;
     }
 
+    if (typeof hotkey !== "string") {
+      return false;
+    }
+
     const parts = hotkey.split("+");
-    return parts.every((part) => part != null && part !== "");
+    return (
+      parts.length <= modifiers.length + 1 && parts.every((part) => part != null && part !== "")
+    );
   }
 
   /**
@@ -781,7 +788,6 @@
   keyHeader.innerText = "Shortcuts";
   keyboardDiv.appendChild(keyHeader);
 
-  const modifiers = ["Control", "Shift", "Alt", "Meta"];
   let targetHotkey = null;
   let stopTimeout = null;
 
