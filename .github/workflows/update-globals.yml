@@ -1,0 +1,42 @@
+name: Update globals.d.ts
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  compare-files:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Fetch remote file contents
+        run: >
+          curl -sSL "https://raw.githubusercontent.com/spicetify/spicetify-cli/master/globals.d.ts"
+          > downloaded_file
+
+      - name: Compare files
+        id: compare
+        run: |
+          if [[ "$(cat globals.d.ts)" != "$(cat downloaded_file)" ]]; then
+            echo "changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create pull request
+        if: steps.compare.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v3
+        with:
+          title: Update globals.d.ts
+          body: |
+            The `globals.d.ts` file has changed.
+          commit-message: Updated globals.d.ts
+          branch-suffix: timestamp
+          delete-branch: true
+          add-paths: globals.d.ts
