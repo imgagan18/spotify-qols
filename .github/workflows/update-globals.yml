@@ -43,6 +43,6 @@ jobs:
           title: Update globals.d.ts
           body: |
             The `globals.d.ts` file has changed.
-          commit-message: Updated globals.d.ts
+          commit-message: Update globals.d.ts
           branch-suffix: timestamp
           delete-branch: true
