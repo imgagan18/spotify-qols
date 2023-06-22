@@ -3,6 +3,7 @@ name: Update globals.d.ts
 on:
   schedule:
     - cron: "0 0 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -29,8 +30,14 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Overwrite globals.d.ts
+        id: overwrite
+        if: ${{ steps.compare.outputs.changed == 'true' }}
+        run: >
+          mv downloaded_file globals.d.ts
+
       - name: Create pull request
-        if: steps.compare.outputs.changed == 'true'
+        if: ${{ steps.overwrite.outcome == 'success' }}
         uses: peter-evans/create-pull-request@v3
         with:
           title: Update globals.d.ts
@@ -39,4 +46,3 @@ jobs:
           commit-message: Updated globals.d.ts
           branch-suffix: timestamp
           delete-branch: true
-          add-paths: globals.d.ts
