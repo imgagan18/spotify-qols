@@ -597,7 +597,7 @@
   }
   .setting-row .col.description {
     float: left;
-    padding-right: 15px;
+    padding-right: 18px;
     width: 100%;
   }
   .setting-row .col.action {
@@ -616,7 +616,7 @@
     white-space: nowrap;
   }
   .hotkey-row .col.action button {
-    margin-left: 8px;
+    margin-left: 10px;
   }
   button.switch {
     align-items: center;
@@ -626,8 +626,8 @@
     color: var(--spice-text);
     cursor: pointer;
     display: flex;
-    margin-inline-start: 12px;
-    padding: 8px;
+    margin-inline-start: 15px;
+    padding: 9px;
   }
   button.switch.disabled,
   button.switch[disabled] {
